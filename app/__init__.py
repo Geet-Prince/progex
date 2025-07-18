@@ -1,8 +1,9 @@
 # ==============================================================================
 # Application Factory
 # ------------------------------------------------------------------------------
-# This file contains the 'create_app' function, which is known as the
-# application factory. It's responsible for all application setup.
+# THIS IS THE DEFINITIVE, FINAL, AND CORRECTED VERSION.
+# It initializes Firebase from a secure environment variable, not a file.
+# This is the robust method for serverless platforms like Cloud Run.
 # ==============================================================================
 
 import firebase_admin
@@ -10,53 +11,48 @@ from firebase_admin import credentials, firestore
 from flask import Flask
 from config import Config
 from flask_mail import Mail
+import os
+import json
 
-# Define the mail object in the global scope. It will be initialized later.
 mail = Mail()
 
 def create_app(config_class=Config):
-    """
-    Application factory function. Configures and returns the Flask app.
-    """
     app = Flask(__name__)
     app.config.from_object(config_class)
-
-    # Initialize the mail object with the application instance
     mail.init_app(app)
 
-    # Initialize Firebase Admin SDK
+    # --- THIS IS THE DEFINITIVE FIX FOR FIREBASE INITIALIZATION ---
     if not firebase_admin._apps:
-        cred_path = app.config['FIREBASE_CREDENTIALS_PATH']
-        if not cred_path:
-            raise ValueError("FIREBASE_CREDENTIALS_PATH is not set in the configuration.")
-        
         try:
-            cred = credentials.Certificate(cred_path)
+            # Get the JSON credentials directly from the environment variable
+            creds_json_str = os.environ.get('FIREBASE_CREDENTIALS_JSON')
+            if not creds_json_str:
+                raise ValueError("FIREBASE_CREDENTIALS_JSON environment variable not set.")
+            
+            # Convert the JSON string into a Python dictionary
+            creds_dict = json.loads(creds_json_str)
+            
+            # Initialize the app with the credentials dictionary
+            cred = credentials.Certificate(creds_dict)
             firebase_admin.initialize_app(cred)
-            print("Firebase initialized successfully.")
+            print("Firebase initialized successfully from environment variable.")
         except Exception as e:
-            raise ValueError(f"Failed to initialize Firebase Admin SDK: {e}")
+            raise ValueError(f"Failed to initialize Firebase Admin SDK from JSON: {e}")
 
-    # Store the db client in the app config for easy access
     db_client = firestore.client()
     app.config['DB'] = db_client
     
-    # --- Import and Register All Blueprints ---
+    # --- Register All Blueprints ---
     from .routes.main import bp as main_bp
     app.register_blueprint(main_bp)
-
-    from .routes.dashboard import bp as dashboard_bp
-    app.register_blueprint(dashboard_bp)
-    
-    from .routes.friends import bp as social_bp 
-    app.register_blueprint(social_bp)
-    
-    from .routes.challenges import bp as challenges_bp
-    app.register_blueprint(challenges_bp)
-
     from .routes.auth import bp as auth_bp
     app.register_blueprint(auth_bp)
-
+    from .routes.dashboard import bp as dashboard_bp
+    app.register_blueprint(dashboard_bp)
+    from .routes.friends import bp as social_bp 
+    app.register_blueprint(social_bp)
+    from .routes.challenges import bp as challenges_bp
+    app.register_blueprint(challenges_bp)
     from .routes.study_plan import bp as study_plan_bp
     app.register_blueprint(study_plan_bp)
 
