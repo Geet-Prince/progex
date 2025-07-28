@@ -469,4 +469,23 @@ def seed_neetcode_plan():
     except Exception as e:
         print(f"ERROR during NeetCode seeding: {e}")
         return f"An error occurred during NeetCode seeding: {e}"
+
+def search_study_plan_questions(query_text):
+    """
+    Searches the list of NeetCode questions for titles that match the query.
+    This is a simple in-memory search.
+    """
+    # NOTE: The NEETCODE_150_QUESTIONS list is defined in this same file.
+    if not query_text:
+        return []
     
+    query_lower = query_text.lower()
+    results = []
+    for question in NEETCODE_150_QUESTIONS:
+        if query_lower in question['title'].lower():
+            results.append({
+                'title': question['title'],
+                'titleSlug': question['titleSlug']
+            })
+    # Return a maximum of 5 results to keep the dropdown clean
+    return results[:5]
