@@ -6,7 +6,7 @@
 # ==============================================================================
 
 import datetime
-from flask import Blueprint, render_template, session, redirect, url_for, flash, request
+from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify
 from app.services import firebase_service, leetcode_api
 
 bp = Blueprint('challenges', __name__)
@@ -206,3 +206,14 @@ def edit_challenge(challenge_id):
     # FIX: Fetch and pass the count for the navbar notification dot
     pending_requests_count = len(firebase_service.get_pending_requests(main_username))
     return render_template('edit_challenge.html', challenge=challenge, pending_requests_count=pending_requests_count)
+
+@bp.route('/challenges/search-problems')
+def search_problems():
+    """An API endpoint to search for LeetCode problems by title."""
+    query = request.args.get('q', '') # Get the search query from the URL (e.g., ?q=two sum)
+    if not query:
+        return jsonify([])
+        
+    # Use our new service function to find matching problems
+    results = firebase_service.search_study_plan_questions(query)
+    return jsonify(results)
